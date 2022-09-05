@@ -14,9 +14,9 @@ project(${PROJECT_NAME_STR}
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
 
 #https://www.youtube.com/watch?v=y9kSr5enrSk
-
 
 # Find other CMakeList.txt
 add_subdirectory(src)
@@ -33,6 +33,7 @@ enable_testing()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND BUILD_TESTING)
     add_subdirectory(test)
 endif()
+
 
 # include_directories (
 #     E:/SD/Programming/C++/vcpkg/installed/x64-windows/include

@@ -10,22 +10,40 @@ set(FIRST_PRINCIPALS_NN_DEMO_SRC
 add_executable(${FIRST_PRINCIPALS_NN_DEMO} ${FIRST_PRINCIPALS_NN_DEMO_SRC})
 
 #--  inih  ------------------------------
-find_path(INIH_INC_PATH INIReader.h)
+find_path(INIH_INC_PATH INIReader.h) 
 message("INIH_INC_PATH is " ${INIH_INC_PATH})
 target_include_directories(${FIRST_PRINCIPALS_NN_DEMO} PUBLIC ${INIH_INC_PATH})
 
-find_library(INIH_INC_LIB inih)
+
+FIND_LIBRARY(INIH_INC_LIB_DEBUG
+  NAMES inih # Change name here if debug lib has different name.
+  PATHS E:/SD/Programming/C++/vcpkg/installed/x64-windows/debug/lib
+  NO_DEFAULT_PATH
+  )
+message("INIH_INC_LIB_DEBUG is " ${INIH_INC_LIB_DEBUG})
+
+
+FIND_LIBRARY(INIH_INC_LIB_RELEASE
+  NAMES inih
+  PATHS E:/SD/Programming/C++/vcpkg/installed/x64-windows/lib
+  NO_DEFAULT_PATH
+  )
+message("INIH_INC_LIB_RELEASE is " ${INIH_INC_LIB_RELEASE})
+
+
+SET(INIH_INC_LIB
+  debug ${INIH_INC_LIB_DEBUG}
+  optimized ${INIH_INC_LIB_RELEASE}
+  )
 message("INIH_INC_LIB is " ${INIH_INC_LIB})
 target_link_libraries(${FIRST_PRINCIPALS_NN_DEMO} PRIVATE ${INIH_INC_LIB})
-#set(INIH_INC_PATH ${vcpkg_root}/include)
 
-# set(JSON_LIB_PATH external/vcpkg/packages/jsoncpp_x64-osx/lib)
-# target_link_directories(${PROJECT_NAME} PUBLIC ${JSON_LIB_PATH})
 
 #----------------------------------------
 
 # The keyword 'PRIVATE' indicates that we are setting the build requirements between this <target> (monte_carlo_derivaitves_demo) 
 # and the dependency (our library file). Use 'INTERFACE' for usage requirements and 'PUBLIC' for both build and usage requirements.
 # You should not ommit one of these keywords, even though the macro allows you to do so - it may behave erratically
-
-# target_link_libraries(${FIRST_PRINCIPALS_NN_DEMO} PRIVATE ${PROJECT_NAME_STR}_lib)
+# find_library(${FIRST_PRINCIPALS_NN_LIBRARY})
+message("My project libraries path is "  ${PROJECT_NAME_STR}_lib)
+target_link_libraries(${FIRST_PRINCIPALS_NN_DEMO} PRIVATE  ${PROJECT_NAME_STR}_lib)

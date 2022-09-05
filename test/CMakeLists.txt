@@ -7,9 +7,10 @@ set(FIRST_PRINCIPALS_UNIT_TESTS ${PROJECT_NAME_STR}_tests)
 set(MC_LIB_TEST_SRC
     test_main.cpp
     neuralnetworktest.cpp
-    # discountcurvetest.cpp
-    # flatratetest.cpp
-    # Black76FormulaTest.cpp
+    readwritematrixtocsvtest.cpp
+    neuralNetworkMethodsTest.cpp
+    inputdatafilereadertest.cpp
+    functionstest.cpp
     )
 
 add_executable(${FIRST_PRINCIPALS_UNIT_TESTS} ${MC_LIB_TEST_SRC})
