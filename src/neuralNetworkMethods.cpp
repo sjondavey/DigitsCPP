@@ -114,7 +114,7 @@ namespace neuralnetworkfirstprinciples {
     }
 
 
-    void one_method_train(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
+    void train_loop_faster(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
                           vector<shared_ptr<ColVector>>& constants_input, vector<shared_ptr<Matrix>>& weights_input,
                           vector<shared_ptr<ColVector>>& data, vector<shared_ptr<ColVector>>& labels,
                           size_t epochs,
@@ -272,7 +272,7 @@ namespace neuralnetworkfirstprinciples {
 
 
 
-    void one_method_train_base(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
+    void train_loop_base(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
                           vector<shared_ptr<ColVector>>& constants_input, vector<shared_ptr<Matrix>>& weights_input,
                           vector<shared_ptr<ColVector>>& data, vector<shared_ptr<ColVector>>& labels,
                           size_t epochs,

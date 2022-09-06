@@ -239,7 +239,7 @@ int run_nn()
         else
         {
             cout << "Using loops" << endl;
-            one_method_train(nodes_per_layer, learning_rate, 
+            train_loop_faster(nodes_per_layer, learning_rate, 
                             constants, weights,
                             training_data_loop, training_labels_loop,
                             epochs);

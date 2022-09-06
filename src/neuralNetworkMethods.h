@@ -24,14 +24,14 @@ namespace neuralnetworkfirstprinciples {
     shared_ptr<Matrix> test_vectorized(vector<shared_ptr<ColVector>>& constants, vector<shared_ptr<Matrix>>& weights,
                         shared_ptr<Matrix> data, shared_ptr<Matrix> labels);
 
-    void one_method_train(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
+    void train_loop_faster(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
                           vector<shared_ptr<ColVector>>& constants, vector<shared_ptr<Matrix>>& weights,
                           vector<shared_ptr<ColVector>>& data, vector<shared_ptr<ColVector>>& labels,
                           size_t epochs,
                           size_t output_cost_accuracy_every_n_steps = 50);
                           
 
-    void one_method_train_base(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
+    void train_loop_base(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
                           vector<shared_ptr<ColVector>>& constants, vector<shared_ptr<Matrix>>& weights,
                           vector<shared_ptr<ColVector>>& data, vector<shared_ptr<ColVector>>& labels,
                           size_t epochs, 
