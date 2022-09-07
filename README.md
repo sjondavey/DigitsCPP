@@ -1,11 +1,14 @@
 # Digit Recognition
- Having written a vectorised version of gradient descent in Python to 'solve' the [Digit Recognition problem](https://www.kaggle.com/competitions/digit-recognizer), I wanted to understand if I could improve the execution time of the training algorithms if I wrote something in C++.
+ Having written a vectorised version of gradient descent in Python to 'solve' the [Digit Recognition problem](https://www.kaggle.com/competitions/digit-recognizer), I wanted to understand if I could improve the execution time of the training algorithms if I wrote something in C++. In principle this should be relatively simple but I wanted to understand what it would take and how much I could improve it. Spoiler alert! Given my limited ability to work in OpenMP with the Microsoft Compiler, I managed a 25% performance improvement on my benchmark test. 
 
  My setup was 
  - Microsoft (R) C/C++ Optimizing Compiler Version 19.32.31329
  - vcpkg package management program version 2022-07-21-a0e87e227afb536c62188c11ad029954f28fdb22
  - Package: [Inih](https://github.com/benhoyt/inih) to read initialiation files
  - Package: [Eigen3 3.4.0](https://eigen.tuxfamily.org/) for matrix manipulation
+ - Package: [Catch2](https://github.com/catchorg/Catch2) for testing
+ - Some terrible CMake - my fault because I am a noob
+ - VSCode
 
 # Code Structure
 The final version of the Gradient Descent algorithm is in `/src/neuralnetwork.cpp`. I wrote this as a class because it reads easier. 
