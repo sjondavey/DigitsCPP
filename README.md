@@ -4,10 +4,10 @@
  My setup was 
  - Microsoft (R) C/C++ Optimizing Compiler Version 19.32.31329
  - vcpkg package management program version 2022-07-21-a0e87e227afb536c62188c11ad029954f28fdb22
- - Package: [Inih](https://github.com/benhoyt/inih) to read initialiation files
+ - Package: [Inih](https://github.com/benhoyt/inih) to read initialisation files
  - Package: [Eigen3 3.4.0](https://eigen.tuxfamily.org/) for matrix manipulation
  - Package: [Catch2](https://github.com/catchorg/Catch2) for testing
- - Some terrible CMake - my fault because I am a noob
+ - Some terrible CMake - my fault because I am a noob. In particular I really struggled getting the appropriate inih debug or release library linked because it appears that inih does not have the necessary CMake support files. In the end I require the user to create an Environment Variable VCPKG_ROOT (to the folder that contains vcpkg.exe) from which I force CMake to find the appropriate version of inih.lib
  - VSCode
 
 # Code Structure
