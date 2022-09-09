@@ -23,7 +23,7 @@ def read_config_file(config_file_name):
     config_parameters['train'] = config.getboolean('data','train')
     config_parameters['epochs'] = int(config['data']['epochs'])
     config_parameters['input_data_file'] = config['data']['input_data_file']
-    config_parameters['training_data_split'] = config['data']['training_data_split']
+    config_parameters['training_data_split'] = config.getfloat('data','training_data_split')
     config_parameters['write_trained_parameters_to_file'] = config.getboolean('data', 'write_trained_parameters_to_file')
     config_parameters['path_to_write_trained_parameters'] = config['data']['path_to_write_trained_parameters']
     config_parameters['parameter_file_prefix'] = config['data']['parameter_file_prefix']
@@ -38,8 +38,8 @@ def read_config_file(config_file_name):
 def main(config_parameters):    
     # this is not from the .ini file on purpose. If I use all the data for training, I do not want to 
     # randomize the order because I want to compare 
-    use_all_data_for_training = True
-    if (use_all_data_for_training):
+    if abs(config_parameters['training_data_split'] -1) < 1e-6:
+        # in this case I do not want to 'randomise' the order of the data. This helps when regression testing against the C++ implementation
         X_train, Y_train = read_kaggle_data_all_into_training(config_parameters['input_data_file'])
     else:
         random_state = 200
