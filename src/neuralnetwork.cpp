@@ -86,9 +86,9 @@ namespace neuralnetworkfirstprinciples {
 
         for (size_t i = 0; i < last_layer; ++i)
         {
-            *unactivated_values[i] = (*weights[i]) * (*neuron_values[i]);
+            (*unactivated_values[i]).noalias() = (*weights[i]) * (*neuron_values[i]);
             (*unactivated_values[i]).colwise() += (*constants[i]); // Adds the constants vector to each column of the unactivated_values matrix
-            (*neuron_values[i+1]) = (*unactivated_values[i]).unaryExpr(&activation_function);
+            (*neuron_values[i+1]).noalias() = (*unactivated_values[i]).unaryExpr(&activation_function);
         }
     }
 
@@ -106,7 +106,7 @@ namespace neuralnetworkfirstprinciples {
         // string path = "E:/Code/kaggle/digits/test/";
         // string filename = path + "neuron_values_" + to_string(last_layer) + ".csv";
         // write_matrix_to_file(filename, *neuron_values[last_layer]);
-        (*d_neuron_values[last_layer-1]) = -((*labels).cwiseQuotient(*neuron_values[last_layer]) - 
+        (*d_neuron_values[last_layer-1]).noalias() = -((*labels).cwiseQuotient(*neuron_values[last_layer]) - 
                                              ((*ones) - (*labels)).cwiseQuotient((*ones) - (*neuron_values[last_layer])) );
         // filename = path + "d_neuron_values_" + to_string(last_layer-1) + ".csv";
         // write_matrix_to_file(filename, *d_neuron_values[last_layer-1]);
@@ -116,16 +116,16 @@ namespace neuralnetworkfirstprinciples {
                 // string filename = path + "d_unactivated_values_" + to_string(i) + ".csv";
                 // write_matrix_to_file(filename, *d_unactivated_values[i]);
             
-            (*d_weights[i]) = ((*d_unactivated_values[i]) * (*neuron_values[i]).transpose()) / (Scalar) number_of_training_examples;
+            (*d_weights[i]).noalias() = ((*d_unactivated_values[i]) * (*neuron_values[i]).transpose()) / (Scalar) number_of_training_examples;
                 // filename = path + "d_weights_" + to_string(i) + ".csv";
                 // write_matrix_to_file(filename, *d_weights[i]);
             
-            (*d_constants[i]) = (*d_unactivated_values[i]).rowwise().sum() / (Scalar) number_of_training_examples;
+            (*d_constants[i]).noalias() = (*d_unactivated_values[i]).rowwise().sum() / (Scalar) number_of_training_examples;
                 // filename = path + "d_constants_" + to_string(i) + ".csv";
                 // write_matrix_to_file(filename, *d_constants[i]);
             if (i > 0) 
             {
-                (*d_neuron_values[i-1]) = (*weights[i]).transpose() * (*d_unactivated_values[i]);
+                (*d_neuron_values[i-1]).noalias() = (*weights[i]).transpose() * (*d_unactivated_values[i]);
                     // filename = path + "d_neuron_values_" + to_string(i-1) + ".csv";
                     // write_matrix_to_file(filename, *d_neuron_values[i-1]);            
             }
@@ -136,9 +136,9 @@ namespace neuralnetworkfirstprinciples {
     {
         for (int i = nodes_per_layer.size() - 2; i >= 0; --i)
         {
-            (*weights[i]) -= learning_rate * (*d_weights[i]);
+            (*weights[i]).noalias() -= learning_rate * (*d_weights[i]);
             d_weights[i]->setZero();
-            (*constants[i]) -= learning_rate * (*d_constants[i]);
+            (*constants[i]).noalias() -= learning_rate * (*d_constants[i]);
             d_constants[i]->setZero();
         }
     }

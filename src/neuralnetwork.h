@@ -19,8 +19,6 @@ namespace neuralnetworkfirstprinciples {
  * simultaneously. 
  * The solution makes use of the Eigen3 matrix library (https://eigen.tuxfamily.org/) 
  * which can run in multiple threads using OpenMP.
- * Having also tried a naive un-vectorised version, where each training example is 
- * run individually, the Vectorized Version is twice as fast (without using OpenMP)
  */
 class NeuralNetwork
 {

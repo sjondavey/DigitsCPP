@@ -21,8 +21,18 @@ Absolute performance is obviously dependant on the tin on which it runs. I will 
 
 My benchmark test consists of 200 epochs though a neural network with 784 input neurons, one hidden layer of 50 neurons and an output layer of 10 neurons i.e. we set the architecture to (784,50,10). All 42,000 examples in the input file will be used in the training set for performance benchmarking (I am not trying to enter the Kaggle competition so no need to reserve anything for testing).
 
-- Python Base: Speed = 1.0 (normalised base). It uses numpy which is multithreaded. 
-- Fastest C++: Speed = 0.75. It uses the OpenMP functionality in Eigen3
+- Python Base: Speed = 1.00 (normalised base). It uses numpy which is multithreaded. 
+- Fastest C++: Speed = 0.54 (46% improvement in execution time). It uses the OpenMP functionality in Eigen3
+
+For referece, the execution time, in seconds on my machine are as follows:
+| Run     | Python | Eigen3 |
+|---------|--------|--------|
+| 1       | 37.6   | 20.23  |
+| 2       | 37.9   | 20.11  |
+| 3       | 38.9   | 22.50  |
+| 4       | 37.2   | 20.26  |
+| 5       | 39.2   | 20.13  |
+| Average | 38.16  | 20.65  |
 
 While I also write loop rather than vectorised versions in C++, I could not get OpenMP to run efficiently in MSVC so these were run in a single thread. The fastest I could achieve in a single thread was 4.0
 

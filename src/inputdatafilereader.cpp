@@ -54,7 +54,7 @@ namespace neuralnetworkfirstprinciples {
                 // string filename = "E:/Code/kaggle/digits/data/digitisednumber" + to_string(lines_read) + ".csv";
                 // writeData(filename, (*digitisedNumbers.back()));
                 lines_read +=1;
-                if (lines_read % 1000 == 0)
+                if (lines_read % 10000 == 0)
                     cout << lines_read << " lines have been read" << endl;
             }
         }
