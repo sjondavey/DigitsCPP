@@ -115,6 +115,169 @@ namespace neuralnetworkfirstprinciples {
 
 
     void train_loop_faster(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
+                          vector<shared_ptr<ColVector>>& constants, vector<shared_ptr<Matrix>>& weights,
+                          vector<shared_ptr<ColVector>>& data, vector<shared_ptr<ColVector>>& labels,
+                          size_t epochs,
+                          size_t output_cost_accuracy_every_n_steps)
+    {
+        Scalar cost = 0;
+        Scalar accuracy = 0;
+
+        double start; 
+        double end; 
+        size_t m = data.size();
+        size_t final_layer_index = nodes_per_layer.size() - 1;
+        unique_ptr<ColVector> ones = make_unique<ColVector>(nodes_per_layer[final_layer_index]);
+        ones->setOnes();
+
+        //////////////////// Setup private variables used by each threads to avoid race conditions ////////////////////
+        // TODO : Why use shared_pointers here ?
+        vector<shared_ptr<Matrix>> weights_transpose = vector<shared_ptr<Matrix>>(weights.size());
+        for (size_t layer_count = 0; layer_count < weights.size(); ++layer_count)
+        {
+            (weights_transpose[layer_count]) = make_shared<Matrix>((weights[layer_count])->transpose());
+        }
+
+        vector<unique_ptr<Matrix>> d_weights_transpose      = vector<unique_ptr<Matrix>>(nodes_per_layer.size() - 1);
+        vector<unique_ptr<ColVector>> d_constants = vector<unique_ptr<ColVector>>(nodes_per_layer.size() - 1);
+        for (size_t nodes_count = 0; nodes_count < nodes_per_layer.size(); nodes_count++) {
+            if (nodes_count > 0) {
+                d_constants[nodes_count-1] = make_unique<ColVector>(nodes_per_layer[nodes_count], 1);
+                d_weights_transpose[nodes_count-1]   = make_unique<Matrix>(nodes_per_layer[nodes_count-1], nodes_per_layer[nodes_count]);
+            }
+        }
+
+        Scalar cost_private, accuracy_private;
+        
+        // Start the big loop
+        for (int i = 0; i < epochs; ++i)
+        {   
+            cost = 0;
+            accuracy = 0;         
+            // reset all deltas to zero
+            cost_private = 0;
+            accuracy_private = 0;
+            for (size_t nodes_count = 0; nodes_count < nodes_per_layer.size() - 1; nodes_count++) {
+                d_constants[nodes_count]->setZero();
+                d_weights_transpose[nodes_count]->setZero();
+            }
+            // iterate through each example in the training set
+            Eigen::initParallel(); // https://eigen.tuxfamily.org/dox/TopicMultiThreading.html
+            concurrency::parallel_for<size_t>(size_t(0), m, [&](size_t j)
+            //for (size_t j = 0; j < m; ++j)
+            {
+                vector<unique_ptr<ColVector>> neuron_values =  vector<unique_ptr<ColVector>>(nodes_per_layer.size()); // A = sigmoid(Z)
+                vector<unique_ptr<ColVector>> unactivated_values  =  vector<unique_ptr<ColVector>>(nodes_per_layer.size()); // Z
+                vector<unique_ptr<ColVector>> d_neuron_values        =  vector<unique_ptr<ColVector>>(nodes_per_layer.size()); // dA
+                // partial derivatives 
+                vector<unique_ptr<ColVector>> d_unactivated_values         = vector<unique_ptr<ColVector>>(nodes_per_layer.size() - 1);
+                for (size_t nodes_count = 0; nodes_count < nodes_per_layer.size(); nodes_count++) {
+                    neuron_values[nodes_count]       = make_unique<ColVector>(ColVector(nodes_per_layer[nodes_count]));
+                    unactivated_values[nodes_count]  = make_unique<ColVector>(ColVector(nodes_per_layer[nodes_count]));
+                    d_neuron_values[nodes_count]     = make_unique<ColVector>(ColVector(nodes_per_layer[nodes_count]));
+                    if (nodes_count > 0) 
+                    {
+                        d_unactivated_values[nodes_count-1]    = make_unique<ColVector>(nodes_per_layer[nodes_count], 1);
+                    }
+                }
+
+                // forward propagation starts
+                // step 1, set the input neurons to the specific training example
+                (*neuron_values.front()) = (*data[j]);
+                //neuron_layers.front()->block(0,0,neuron_layers.front()->size(),1) = (*data[j]);
+                
+                // Step 2, move the input through the layers, saving information that will be needed in the back propagation
+                // apply the activation function to your network
+                // unaryExpr applies the given function to all elements of CURRENT_LAYER
+                for (size_t node_count = 1; node_count < nodes_per_layer.size(); node_count++) 
+                {
+                    (*unactivated_values[node_count]) = ((*weights[node_count - 1]) * (*neuron_values[node_count - 1]) + (*constants[node_count-1]));
+                    (*neuron_values[node_count]) = (*unactivated_values[node_count]).unaryExpr(&activation_function) ;
+
+                }                
+                string path = "E:/Code/kaggle/digits/data/mess/";
+                string filename = path + "neuron_values_" + to_string(j) + "_fast.csv";
+                write_matrix_to_file(filename, *neuron_values.back());
+
+                if (i % output_cost_accuracy_every_n_steps == 0) 
+                { // Collect some stats
+                    // cost_private += get_cost_value(neuron_values.back(), labels[j]);
+
+                    cost_private -= 
+                          ((*labels[j]).cwiseProduct((*neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log)) +
+                          (*ones - *labels[j]).cwiseProduct((*ones - *neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log))).sum();
+
+                    // Scalar sum = 0;
+                    // for (size_t i = 0; i < (neuron_values.back())->size(); ++ i)
+                    //     sum += (*labels[j])(i) * log((*(neuron_values.back()))(i)) + (1 - (*labels[j])(i)) * log(1-(*(neuron_values.back()))(i));
+                    // cost_private -= sum;
+
+                    // accuracy_private += get_accuracy(neuron_values.back(), labels[j]);
+                    size_t i = 0;
+                    bool match = true;
+                    int match_as_int = 1;
+                    while (match && i < (neuron_values.back())->size())
+                    {
+                        Scalar estimate = (*(neuron_values.back()))(i);
+                        if (estimate > 0.5)
+                            estimate = 1;
+                        else
+                            estimate = 0;
+                        if (abs(estimate - (*labels[j])(i)) > 1e-3) // elements don't match
+                        {
+                            match = false;
+                            match_as_int = 0;
+                        }
+                        ++i;
+                    }
+                    accuracy_private += (Scalar) match_as_int;
+                }
+
+                //////////////////////////////////////////////////////////////////////////////////
+                // backwards propagation
+                // Step 1: Start with the final node where where we need to calculate
+                // A = \mathscr{L} (\hat{y^[i]}, y^[i]) for i = 1,...,m
+                // one node at a time
+                (*d_neuron_values.back()) = -((*labels[j]).cwiseQuotient(*neuron_values[final_layer_index]) - 
+                                              ((*ones) - (*labels[j])).cwiseQuotient((*ones) - (*neuron_values[final_layer_index])) );
+
+
+                // Step 2: move the error back in time to the first layer
+                for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
+                {
+                    (*d_unactivated_values[k]) = (*d_neuron_values[k+1]).cwiseProduct((*unactivated_values[k+1]).unaryExpr(&activation_function_derivative)); // dz_curr = dA_curr * sigmoid_backward(Z_curr)                            
+                    // See http://eigen.tuxfamily.org/dox-devel/TopicWritingEfficientProductExpression.html for the use of .noalias()
+                    (*d_weights_transpose[k]).noalias() += (*neuron_values[k]) * d_unactivated_values[k]->transpose();
+                    (*d_constants[k]).noalias() += (*d_unactivated_values[k]);
+                    if (k > 0)
+                    {
+                        (*d_neuron_values[k]) = (*weights_transpose[k]) * (*d_unactivated_values[k]); // dA_prev = np.dot(W_curr.T, dZ_curr)        
+                    }
+                }
+            });
+            for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
+            {
+                (*weights_transpose[k]).noalias() -= learning_rate / ((Scalar) m) * (*d_weights_transpose[k]);
+                (*weights[k]) = weights_transpose[k]->transpose();
+                (*constants[k]).noalias() -= learning_rate / ((Scalar) m) * (*d_constants[k]);
+            }
+
+            if (i % output_cost_accuracy_every_n_steps == 0)
+            {
+                cost += cost_private;
+                cost /= m;
+                accuracy += accuracy_private;
+                accuracy /= m;
+                cout << "Epochs: " << std::setfill('0') << std::setw(5) 
+                     << to_string(i) << ", cost: " << to_string(cost) << ", accuracy: " << to_string(accuracy) << endl;
+            }
+        } // for epochs
+
+    } // one_method_train
+
+
+/*
+    void train_loop_faster(const vector<unsigned short> nodes_per_layer, const float learning_rate, 
                           vector<shared_ptr<ColVector>>& constants_input, vector<shared_ptr<Matrix>>& weights_input,
                           vector<shared_ptr<ColVector>>& data, vector<shared_ptr<ColVector>>& labels,
                           size_t epochs,
@@ -191,11 +354,18 @@ namespace neuralnetworkfirstprinciples {
                 }                
                 if (i % output_cost_accuracy_every_n_steps == 0) 
                 { // Collect some stats
-                    Scalar sum = 0;
-                    for (size_t i = 0; i < (neuron_values.back())->size(); ++ i)
-                        sum += (*labels[j])(i) * log((*(neuron_values.back()))(i)) + (1 - (*labels[j])(i)) * log(1-(*(neuron_values.back()))(i));
-                    cost_private -= sum;
+                    // cost_private += get_cost_value(neuron_values.back(), labels[j]);
 
+                    cost_private -= 
+                          ((*labels[j]).cwiseProduct((*neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log)) +
+                          (*ones - *labels[j]).cwiseProduct((*ones - *neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log))).sum();
+
+                    // Scalar sum = 0;
+                    // for (size_t i = 0; i < (neuron_values.back())->size(); ++ i)
+                    //     sum += (*labels[j])(i) * log((*(neuron_values.back()))(i)) + (1 - (*labels[j])(i)) * log(1-(*(neuron_values.back()))(i));
+                    // cost_private -= sum;
+
+                    // accuracy_private += get_accuracy(neuron_values.back(), labels[j]);
                     size_t i = 0;
                     bool match = true;
                     int match_as_int = 1;
@@ -222,27 +392,26 @@ namespace neuralnetworkfirstprinciples {
                 // A = \mathscr{L} (\hat{y^[i]}, y^[i]) for i = 1,...,m
                 // one node at a time
                 (*d_neuron_values.back()) = -((*labels[j]).cwiseQuotient(*neuron_values[final_layer_index]) - 
-                                        ((*ones) - (*labels[j])).cwiseQuotient((*ones) - (*neuron_values[final_layer_index])) );
+                                              ((*ones) - (*labels[j])).cwiseQuotient((*ones) - (*neuron_values[final_layer_index])) );
 
-                // for (size_t node_number = 0; node_number < nodes_per_layer[final_layer_index]; ++node_number)
-                // {
-                //     (*deltas.back())(node_number) = -((*labels[j])(node_number) / (*neuron_layers[final_layer_index])(node_number) - 
-                //                                       (1 - (*labels[j])(node_number)) / (1-(*neuron_layers[final_layer_index])(node_number)) ); 
-                // }
                 // Step 2: move the error back in time to the first layer
                 for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
                 {
-                    (*d_unactivated_values[k]) = (*d_neuron_values[k+1]).cwiseProduct((*unactivated_values[k+1]).unaryExpr(&activation_function_derivative)); // dz_curr = dA_curr * sigmoid_backward(Z_curr)
-                    (*d_neuron_values[k]) = (*weights_transpose[k]) * (*d_unactivated_values[k]); // dA_prev = np.dot(W_curr.T, dZ_curr)                
-                    (*d_weights_transpose[k]) += (*neuron_values[k]) * d_unactivated_values[k]->transpose();
-                    (*d_constants[k]) += (*d_unactivated_values[k]);
+                    (*d_unactivated_values[k]) = (*d_neuron_values[k+1]).cwiseProduct((*unactivated_values[k+1]).unaryExpr(&activation_function_derivative)); // dz_curr = dA_curr * sigmoid_backward(Z_curr)                            
+                    // See http://eigen.tuxfamily.org/dox-devel/TopicWritingEfficientProductExpression.html for the use of .noalias()
+                    (*d_weights_transpose[k]).noalias() += (*neuron_values[k]) * d_unactivated_values[k]->transpose();
+                    (*d_constants[k]).noalias() += (*d_unactivated_values[k]);
+                    if (k > 0)
+                    {
+                        (*d_neuron_values[k]) = (*weights_transpose[k]) * (*d_unactivated_values[k]); // dA_prev = np.dot(W_curr.T, dZ_curr)        
+                    }
                 }
             }
             for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
             {
-                (*weights_transpose[k]) -= learning_rate / ((Scalar) m) * (*d_weights_transpose[k]);
+                (*weights_transpose[k]).noalias() -= learning_rate / ((Scalar) m) * (*d_weights_transpose[k]);
                 (*weights[k]) = weights_transpose[k]->transpose();
-                (*constants[k]) -= learning_rate / ((Scalar) m) * (*d_constants[k]);
+                (*constants[k]).noalias() -= learning_rate / ((Scalar) m) * (*d_constants[k]);
             }
 
 
@@ -259,9 +428,7 @@ namespace neuralnetworkfirstprinciples {
         } // for epochs
 
     } // one_method_train
-
-
-
+*/
 
 
 
@@ -346,8 +513,16 @@ namespace neuralnetworkfirstprinciples {
                 for (size_t node_count = 1; node_count < nodes_per_layer.size(); node_count++) 
                 {
                     (*cache_layers[node_count]) = ((*weights[node_count - 1]) * (*neuron_layers[node_count - 1]) + (*constants[node_count-1]));
+                    // string path = "E:/Code/kaggle/digits/data/";
+                    // string filename = path + "cache_layer" + to_string(j) + "_" + to_string(node_count) + ".csv";
+                    // write_matrix_to_file(filename, *cache_layers[node_count]);
+
                     (*neuron_layers[node_count]) = (*cache_layers[node_count]).unaryExpr(&activation_function) ;
-                }                
+                }
+                string path = "E:/Code/kaggle/digits/data/mess/";
+                string filename = path + "neuron_values_" + to_string(j) + "_base.csv";
+                write_matrix_to_file(filename, *neuron_layers.back());
+
                 if (i % output_cost_accuracy_every_n_steps == 0)
                 { // Collect some stats
                     cost_private += get_cost_value((neuron_layers.back()), labels[j]);
@@ -364,14 +539,22 @@ namespace neuralnetworkfirstprinciples {
                     (*deltas.back())(node_number) =  -((*labels[j])(node_number) / (*neuron_layers[final_layer_index])(node_number) - 
                                             (1 - (*labels[j])(node_number)) / (1-(*neuron_layers[final_layer_index])(node_number)) ); 
                 }
+                // string path = "E:/Code/kaggle/digits/data/mess/";
+                // string filename = path + "d_neuron_values_" + to_string(j) + "_base.csv";
+                // write_matrix_to_file(filename, *deltas.back());
+
                 // Step 2: move the error back in time to the first layer
                 for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
                 {
                     (*d_z[k]) = (*deltas[k+1]).cwiseProduct((*cache_layers[k+1]).unaryExpr(&activation_function_derivative)); // dz_curr = dA_curr * sigmoid_backward(Z_curr)
-                    (*deltas[k]) = (weights[k]->transpose()) * (*d_z[k]); // dA_prev = np.dot(W_curr.T, dZ_curr)                
                     // Update Weights
                     (*d_weights[k]) += ((*d_z[k]) * (neuron_layers[k]->transpose()));
                     (*d_constants[k]) += (*d_z[k]);
+                    if (k > 0)
+                    {
+                        (*deltas[k]) = (weights[k]->transpose()) * (*d_z[k]); // dA_prev = np.dot(W_curr.T, dZ_curr)                
+                    }
+
                 }
             }
             for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
@@ -379,6 +562,7 @@ namespace neuralnetworkfirstprinciples {
                 (*weights[k]) -= learning_rate / ((Scalar) m) * (*d_weights[k]);
                 (*constants[k]) -= learning_rate / ((Scalar) m) * (*d_constants[k]);
             }
+
             if (i % output_cost_accuracy_every_n_steps == 0)
             {
                 cost += cost_private;

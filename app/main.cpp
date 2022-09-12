@@ -17,15 +17,23 @@ int run_nn()
     // There are vectorized and 'loop' versions of gradient descent. There take data and label inputs in 
     // different formats. Setting this value to true creates variables for vectorised versions and 
     // false for loop versions of the gradient descent function
-    bool vectorised = true;
+    bool vectorised = false;
 
     std::cout << "Loading inputs";
     if (vectorised) 
     {
         cout << " for a vectorized gradient descent solution" << std::endl;
+        int processors = omp_get_num_procs();
+        Eigen::setNbThreads(processors);
+        cout << "Eigen number of threads: " << Eigen::nbThreads( ) << endl;
+
     }
     else {
         cout << " for a 'loop' gradient descent solution" << std::endl;
+        //////////////////////////////////////////////////////////////////////////////////////////////
+        #define EIGEN_DONT_PARALLELIZE
+        //////////////////////////////////////////////////////////////////////////////////////////////
+        cout << "Eigen number of threads: " << Eigen::nbThreads( ) << endl;
     }
 
     INIReader reader("../../examples/test.ini");
@@ -58,7 +66,6 @@ int run_nn()
                 std::cout << "Nodes per layer must be a non-negative integer" << '\n';
                 return -1;
             }
-            cout << "Nodes per payer: " << substr << endl;
             nodes_per_layer.push_back(nodes);
         }
         catch (invalid_argument const& ex)
@@ -190,9 +197,6 @@ int run_nn()
         }
         
         size_t training_data_volume = (size_t) (raw_data_volume * training_data_split);
-        std::cout << "Total data points: " << to_string(raw_data_volume) << ", of which " 
-            << to_string(training_data_volume) << " allocated to training and " 
-            << to_string(raw_data_volume-training_data_volume) << " to testing"  << endl;
 
         shared_ptr<Matrix> training_data, training_labels, test_data, test_labels;
         vector<shared_ptr<ColVector>> training_data_loop, training_labels_loop, test_data_loop, test_labels_loop;
@@ -219,9 +223,6 @@ int run_nn()
 
 
 
-        int processors = omp_get_num_procs();
-        Eigen::setNbThreads(processors);
-        cout << "Eigen number of threads: " << Eigen::nbThreads( ) << endl;
 
         double start = omp_get_wtime(); 
 
