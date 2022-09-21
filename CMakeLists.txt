@@ -14,6 +14,7 @@ project(${PROJECT_NAME_STR}
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# needed to run Eigen over all threads
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
 
 #https://www.youtube.com/watch?v=y9kSr5enrSk

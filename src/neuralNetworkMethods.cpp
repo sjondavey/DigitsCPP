@@ -148,7 +148,7 @@ namespace neuralnetworkfirstprinciples {
         }
 
         Scalar cost_private, accuracy_private;
-        
+        vector<Scalar> calcuated_values(m);
         // Start the big loop
         for (int i = 0; i < epochs; ++i)
         {   
@@ -163,8 +163,9 @@ namespace neuralnetworkfirstprinciples {
             }
             // iterate through each example in the training set
             Eigen::initParallel(); // https://eigen.tuxfamily.org/dox/TopicMultiThreading.html
-            concurrency::parallel_for<size_t>(size_t(0), m, [&](size_t j)
-            //for (size_t j = 0; j < m; ++j)
+
+            //concurrency::parallel_for<size_t>(size_t(0), m, [&](size_t j)
+            for (size_t j = 0; j < m; ++j)
             {
                 vector<unique_ptr<ColVector>> neuron_values =  vector<unique_ptr<ColVector>>(nodes_per_layer.size()); // A = sigmoid(Z)
                 vector<unique_ptr<ColVector>> unactivated_values  =  vector<unique_ptr<ColVector>>(nodes_per_layer.size()); // Z
@@ -195,17 +196,18 @@ namespace neuralnetworkfirstprinciples {
                     (*neuron_values[node_count]) = (*unactivated_values[node_count]).unaryExpr(&activation_function) ;
 
                 }                
-                string path = "E:/Code/kaggle/digits/data/mess/";
-                string filename = path + "neuron_values_" + to_string(j) + "_fast.csv";
-                write_matrix_to_file(filename, *neuron_values.back());
+                // string path = "E:/Code/kaggle/digits/data/mess/";
+                // string filename = path + "neuron_values_" + to_string(j) + "_fast.csv";
+                // write_matrix_to_file(filename, *neuron_values.back());
 
                 if (i % output_cost_accuracy_every_n_steps == 0) 
                 { // Collect some stats
-                    // cost_private += get_cost_value(neuron_values.back(), labels[j]);
-
-                    cost_private -= 
-                          ((*labels[j]).cwiseProduct((*neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log)) +
-                          (*ones - *labels[j]).cwiseProduct((*ones - *neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log))).sum();
+                    Scalar tmp = get_cost_value(neuron_values.back(), labels[j]);
+                    cost_private += tmp;
+                    calcuated_values[j] = tmp;
+                    // cost_private -= 
+                    //       ((*labels[j]).cwiseProduct((*neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log)) +
+                    //       (*ones - *labels[j]).cwiseProduct((*ones - *neuron_values.back()).unaryExpr<Scalar(*)(Scalar)>(&std::log))).sum();
 
                     // Scalar sum = 0;
                     // for (size_t i = 0; i < (neuron_values.back())->size(); ++ i)
@@ -241,6 +243,10 @@ namespace neuralnetworkfirstprinciples {
                 (*d_neuron_values.back()) = -((*labels[j]).cwiseQuotient(*neuron_values[final_layer_index]) - 
                                               ((*ones) - (*labels[j])).cwiseQuotient((*ones) - (*neuron_values[final_layer_index])) );
 
+                // string path = "E:/Code/kaggle/digits/data/mess/";
+                // string filename = path + "neuron_values_" + to_string(j) + "_fast.csv";
+                // write_matrix_to_file(filename, *neuron_values.back());
+
 
                 // Step 2: move the error back in time to the first layer
                 for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
@@ -254,7 +260,8 @@ namespace neuralnetworkfirstprinciples {
                         (*d_neuron_values[k]) = (*weights_transpose[k]) * (*d_unactivated_values[k]); // dA_prev = np.dot(W_curr.T, dZ_curr)        
                     }
                 }
-            });
+            }
+            //});
             for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
             {
                 (*weights_transpose[k]).noalias() -= learning_rate / ((Scalar) m) * (*d_weights_transpose[k]);
@@ -270,6 +277,10 @@ namespace neuralnetworkfirstprinciples {
                 accuracy /= m;
                 cout << "Epochs: " << std::setfill('0') << std::setw(5) 
                      << to_string(i) << ", cost: " << to_string(cost) << ", accuracy: " << to_string(accuracy) << endl;
+
+                // std::ofstream output_file("E:/Code/kaggle/digits/data/mess/cost_detail_fast.csv");
+                // std::ostream_iterator<Scalar> output_iterator(output_file, "\n");
+                // std::copy(calcuated_values.begin(), calcuated_values.end(), output_iterator);
             }
         } // for epochs
 
@@ -490,6 +501,7 @@ namespace neuralnetworkfirstprinciples {
         size_t final_layer_index = nodes_per_layer.size() - 1;
         
         // Start the big loop
+        vector<Scalar> calcuated_values(m);
         for (int i = 0; i < epochs; ++i)
         {   
             cost = 0;
@@ -519,13 +531,15 @@ namespace neuralnetworkfirstprinciples {
 
                     (*neuron_layers[node_count]) = (*cache_layers[node_count]).unaryExpr(&activation_function) ;
                 }
-                string path = "E:/Code/kaggle/digits/data/mess/";
-                string filename = path + "neuron_values_" + to_string(j) + "_base.csv";
-                write_matrix_to_file(filename, *neuron_layers.back());
+                // string path = "E:/Code/kaggle/digits/data/mess/";
+                // string filename = path + "neuron_values_" + to_string(j) + "_base.csv";
+                // write_matrix_to_file(filename, *neuron_layers.back());
 
                 if (i % output_cost_accuracy_every_n_steps == 0)
                 { // Collect some stats
-                    cost_private += get_cost_value((neuron_layers.back()), labels[j]);
+                    Scalar tmp = get_cost_value((neuron_layers.back()), labels[j]);
+                    cost_private += tmp;
+                    calcuated_values[j] = tmp;
                     accuracy_private += (Scalar) get_accuracy((neuron_layers.back()), labels[j]);
                 }
 
@@ -559,6 +573,13 @@ namespace neuralnetworkfirstprinciples {
             }
             for (int k = nodes_per_layer.size() - 2; k >= 0; --k)
             {
+                // string path = "E:/Code/kaggle/digits/data/mess/";
+                // string filename = path + "d_weights_" + to_string(k) + "_base.csv";
+                // write_matrix_to_file(filename, *d_weights[k]);
+
+                // filename = path + "d_constants_" + to_string(k) + "_base.csv";
+                // write_matrix_to_file(filename, *d_constants[k]);
+
                 (*weights[k]) -= learning_rate / ((Scalar) m) * (*d_weights[k]);
                 (*constants[k]) -= learning_rate / ((Scalar) m) * (*d_constants[k]);
             }
@@ -571,6 +592,11 @@ namespace neuralnetworkfirstprinciples {
                 accuracy /= m;
                 cout << "Epochs: " << std::setfill('0') << std::setw(5) 
                      << to_string(i) << ", cost: " << to_string(cost) << ", accuracy: " << to_string(accuracy) << endl;
+
+                // std::ofstream output_file("E:/Code/kaggle/digits/data/mess/cost_detail_base.csv");
+                // std::ostream_iterator<Scalar> output_iterator(output_file, "\n");
+                // std::copy(calcuated_values.begin(), calcuated_values.end(), output_iterator);
+
             }
         } // main if loop
 
