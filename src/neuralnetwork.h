@@ -82,7 +82,7 @@ class NeuralNetwork
 
 
     vector<unsigned short> nodes_per_layer; 
-    float learning_rate;
+    Scalar learning_rate;
 
     shared_ptr<Matrix> data;
     size_t number_of_training_examples;

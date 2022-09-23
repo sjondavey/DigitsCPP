@@ -96,7 +96,7 @@ class NeuralNetworkLoop
     void propagate(vector<size_t> training_set_indicies);
 
     vector<unsigned short> nodes_per_layer; 
-    float learning_rate;
+    Scalar learning_rate;
 
     vector<shared_ptr<ColVector>> data;
     size_t number_of_training_examples;

@@ -24,19 +24,20 @@ Absolute performance is obviously dependant on the tin on which it runs. I will 
 My benchmark test consists of 200 epochs though a neural network with 784 input neurons, one hidden layer of 50 neurons and an output layer of 10 neurons i.e. we set the architecture to (784,50,10). All 42,000 examples in the input file will be used in the training set for performance benchmarking (I am not trying to enter the Kaggle competition so no need to reserve anything for testing).
 
 - Python Base: Speed = 1.00 (normalised base). It uses numpy which is multithreaded. 
-- Fastest C++: Speed = 0.54 (46% improvement in execution time). It uses the Eigne for Vectorisation and Eigen uses OpenMP for multithreading
-- Loop (single thread) = 2.80x
-- Loop (threaded) = 0.83 (16.5% improvement). Using intel's oneTBB for multithreading 
+- Fastest C++: Speed = 0.54 (46% improvement in execution time). It uses the Eigen for Vectorisation which uses OpenMP for multithreading. Speedup was almost entirely due to moving from double to single digit precision (see the `/src/typedefs.h` file to make this change)
+- Loop (single thread, single precision) = 2.80x
+- Loop (multi threaded, single precision) = 0.83 (16.5% improvement). Using intel's oneTBB for multithreading 
 
-For referece, the execution time, in seconds on my machine are as follows:
-| Run     | Python | Eigen3 | Loop (single) | Loop (tbb) |
-|---------|--------|--------|---------------|------------|
-| 1       | 37.6   | 20.23  |107.11	        |31.91       |
-| 2       | 37.9   | 20.11  |106.45	        |31.62       |
-| 3       | 38.9   | 22.50  |106.51	        |32.04       |
-| 4       | 37.2   | 20.26  |106.51	        |31.53       |
-| 5       | 39.2   | 20.13  |107.6	        |32.04       |
-| Average | 38.16  | 20.65  |106.84	        |31.83       |
+For reference, the execution time, in seconds on my machine are as follows:  
+|         | Python | Eigen3 | Eigen3 |Loop (1 thread) | Loop (tbb) |
+|---------|--------|--------|--------|--------------|------------|
+|Precision| double | single | double |single        | single     |
+| 1       | 37.6   | 20.23  | 36.75  |107.11	    |31.91       |
+| 2       | 37.9   | 20.11  | 38.28  |106.45	    |31.62       |
+| 3       | 38.9   | 22.50  | 37.95  |106.51	    |32.04       |
+| 4       | 37.2   | 20.26  | 36.46  |106.51	    |31.53       |
+| 5       | 39.2   | 20.13  | 36.74  |107.6	        |32.04       |
+| Average | 38.16  | 20.65  | 37.24  |106.84	    |31.83       |
 
 
 
