@@ -75,3 +75,18 @@ def train(nodes_per_layer, learning_rate, parameters, X, Y, epochs, output_train
             print("Iteration: {:05} - cost: {:.5f} - accuracy: {:.5f}".format(epoch, cost, accuracy))
 
     return parameters
+
+
+def predict(nodes_per_layer, parameters, X, Y, output_stats = True):
+    neuron_values_curr = X
+    # forward propagation    
+    for i in range(0, len(nodes_per_layer) - 1):
+        neuron_layer_prev = neuron_values_curr
+        weight_curr = parameters["W" + str(i)]
+        constants_curr = parameters["b" + str(i)]
+        unactivated_values_curr = np.dot(weight_curr, neuron_layer_prev) + constants_curr           
+        neuron_values_curr = sigmoid(unactivated_values_curr)
+
+    cost = get_cost_value(neuron_values_curr, Y)
+    accuracy = get_accuracy_value(neuron_values_curr, Y)
+    print("Prediction: - cost: {:.5f} - accuracy: {:.5f}".format(cost, accuracy))

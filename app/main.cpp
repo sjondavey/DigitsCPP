@@ -93,6 +93,10 @@ int run_nn()
 
     // Create the neural network with the input parameters
     
+    bool write_trained_parameters_to_file = reader.GetBoolean("data", "write_trained_parameters_to_file", false);
+    string path_to_write_trained_parameters = reader.GetString("data", "path_to_write_trained_parameters", "./");
+    string parameter_file_prefix = reader.GetString("data", "parameter_file_prefix", "default");
+
     vector<shared_ptr<ColVector>> constants;
     vector<shared_ptr<Matrix>> weights;
     bool use_existing_parameters = reader.GetBoolean("network", "use_existing_parameters", false);
@@ -121,6 +125,19 @@ int run_nn()
     else
     {
         generate_random_weights(nodes_per_layer, weights, constants);
+
+        // write to output path
+        if (write_trained_parameters_to_file)
+        {
+            string input_parameter_file_prefix = parameter_file_prefix + "_input";
+            write_parameters(weights, constants, path_to_write_trained_parameters, input_parameter_file_prefix);
+            cout << "Training parameters persisted to file" << endl;
+        }
+        else {
+            cout << "Training parameters NOT persisted to file" << endl;
+        }
+
+
     }
     NeuralNetwork nn = NeuralNetwork(nodes_per_layer, learning_rate, constants, weights);
     NeuralNetworkLoop nn_loop = NeuralNetworkLoop(nodes_per_layer, learning_rate, constants, weights);
@@ -269,11 +286,8 @@ int run_nn()
         double end = omp_get_wtime(); 
         printf("Training took %f seconds\n", end - start);
 
-        bool write_trained_parameters_to_file = reader.GetBoolean("data", "write_trained_parameters_to_file", false);
         if (write_trained_parameters_to_file)
         {
-            string path_to_write_trained_parameters = reader.GetString("data", "path_to_write_trained_parameters", "./");
-            string parameter_file_prefix = reader.GetString("data", "parameter_file_prefix", "default");
             write_parameters(weights, constants, path_to_write_trained_parameters, parameter_file_prefix);
             cout << "Training parameters persisted to file" << endl;
         }

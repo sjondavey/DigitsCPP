@@ -159,6 +159,9 @@ namespace neuralnetworkfirstprinciples {
                                 vector<shared_ptr<Matrix>>& weights,
                                 vector<shared_ptr<ColVector>>& constants)
     {
+
+        srand((unsigned int) time(0));
+        
         weights =       vector<shared_ptr<Matrix>>(nodes_per_layer.size() - 1);
         constants =     vector<shared_ptr<ColVector>>(nodes_per_layer.size() - 1);
 
