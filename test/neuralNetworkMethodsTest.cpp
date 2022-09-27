@@ -6,7 +6,7 @@
 using namespace std;
 using namespace neuralnetworkfirstprinciples;
 
-// Regression test data
+/* Regression test data
 void read_input_data(vector<shared_ptr<ColVector>>& labelAsVectors,
                      vector<shared_ptr<ColVector>>& digitisedNumbers) 
 {
@@ -74,6 +74,7 @@ void create_input_data(vector<shared_ptr<ColVector>>& input_data,
     (*test_weights[1])(1,1) = 0.1;
     (*test_weights[1])(1,2) = 0.3;
 }
+*/
 
 TEST_CASE("Neural Network function", "[neuralnetworkfunctiontest]") {
 
@@ -127,14 +128,14 @@ TEST_CASE("Neural Network function", "[neuralnetworkfunctiontest]") {
         string regression_input_prefix = "regression_input";
         read_parameters(weights, constants, path, regression_input_prefix);
 
-        size_t epochs = 1;
+        size_t epochs = 10;
         string output_file_prefix = "regression_output";
 
         train_loop_base(nodes_per_layer, learning_rate, 
                           constants, weights,
                           data, labels,
                           epochs);
-        //write_parameters(weights, constants, path, "funny_recon");                
+        // //write_parameters(weights, constants, path, "funny_recon");                
 
 
         vector<shared_ptr<Matrix>> weights_check = vector<shared_ptr<Matrix>>(0);
@@ -151,13 +152,11 @@ TEST_CASE("Neural Network function", "[neuralnetworkfunctiontest]") {
         REQUIRE(constants_check[0]->rows() == constants[0]->rows());
         REQUIRE(constants_check[0]->cols() == constants[0]->cols());
         REQUIRE(abs((*constants_check[0])(15) - (*constants[0])(15)) < 1e-6);
-
-        REQUIRE(true);
     }
 
     SECTION("Regression Test - Fast Loop") 
     {
-        Eigen::initParallel();
+        // Eigen::initParallel();
         vector<shared_ptr<ColVector>> labels;
         vector<shared_ptr<ColVector>> data;
         string path = "E:/Code/kaggle/digits/test/";
@@ -173,7 +172,7 @@ TEST_CASE("Neural Network function", "[neuralnetworkfunctiontest]") {
         string regression_input_prefix = "regression_input";
         read_parameters(weights, constants, path, regression_input_prefix);
 
-        size_t epochs = 1;
+        size_t epochs = 10;
         string output_file_prefix = "regression_output";
 
 
@@ -200,7 +199,6 @@ TEST_CASE("Neural Network function", "[neuralnetworkfunctiontest]") {
         REQUIRE(constants_check[0]->cols() == constants[0]->cols());
         REQUIRE(abs((*constants_check[0])(15) - (*constants[0])(15)) < 1e-6);
 
-//        REQUIRE(true);
     }
 
     SECTION("Vectorized implementation") 
@@ -252,7 +250,6 @@ TEST_CASE("Neural Network function", "[neuralnetworkfunctiontest]") {
         REQUIRE(constants_check[0]->rows() == constants[0]->rows());
         REQUIRE(constants_check[0]->cols() == constants[0]->cols());
         REQUIRE(abs((*constants_check[0])(15) - (*constants[0])(15)) < 1e-6);
-
     }
 
 }

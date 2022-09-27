@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include "../src/neuralnetwork.h"
+#include "../src/neuralnetworkloop.h"
 #include "../src/neuralNetworkMethods.h"
 #include "../src/inputdatafilereader.h"
 #include <omp.h>
@@ -14,12 +15,20 @@ using namespace neuralnetworkfirstprinciples;
 
 int run_nn()
 {
+    INIReader reader("../../examples/test.ini");
+
+    if (reader.ParseError() < 0) {
+        std::cout << "Can't load 'test.ini'\n";
+        return 1;
+    }
+    std::cout << "Loading inputs";
+
     // There are vectorized and 'loop' versions of gradient descent. There take data and label inputs in 
     // different formats. Setting this value to true creates variables for vectorised versions and 
     // false for loop versions of the gradient descent function
-    bool vectorised = false;
+    bool vectorised = reader.GetBoolean("algorithm", "vectorised", false);
+    bool threaded = reader.GetBoolean("algorithm", "threaded", false);    
 
-    std::cout << "Loading inputs";
     if (vectorised) 
     {
         cout << " for a vectorized gradient descent solution" << std::endl;
@@ -36,12 +45,6 @@ int run_nn()
         cout << "Eigen number of threads: " << Eigen::nbThreads( ) << endl;
     }
 
-    INIReader reader("../../examples/test.ini");
-
-    if (reader.ParseError() < 0) {
-        std::cout << "Can't load 'test.ini'\n";
-        return 1;
-    }
 
     ///////////////// NETWORK Parameters /////////////////
     // Read network::architecture and convert it into a vector of int
@@ -90,6 +93,10 @@ int run_nn()
 
     // Create the neural network with the input parameters
     
+    bool write_trained_parameters_to_file = reader.GetBoolean("data", "write_trained_parameters_to_file", false);
+    string path_to_write_trained_parameters = reader.GetString("data", "path_to_write_trained_parameters", "./");
+    string parameter_file_prefix = reader.GetString("data", "parameter_file_prefix", "default");
+
     vector<shared_ptr<ColVector>> constants;
     vector<shared_ptr<Matrix>> weights;
     bool use_existing_parameters = reader.GetBoolean("network", "use_existing_parameters", false);
@@ -118,8 +125,22 @@ int run_nn()
     else
     {
         generate_random_weights(nodes_per_layer, weights, constants);
+
+        // write to output path
+        if (write_trained_parameters_to_file)
+        {
+            string input_parameter_file_prefix = parameter_file_prefix + "_input";
+            write_parameters(weights, constants, path_to_write_trained_parameters, input_parameter_file_prefix);
+            cout << "Training parameters persisted to file" << endl;
+        }
+        else {
+            cout << "Training parameters NOT persisted to file" << endl;
+        }
+
+
     }
     NeuralNetwork nn = NeuralNetwork(nodes_per_layer, learning_rate, constants, weights);
+    NeuralNetworkLoop nn_loop = NeuralNetworkLoop(nodes_per_layer, learning_rate, constants, weights);
 
     ///////////////// DATA Parameters /////////////////
     // Read data::input_data_file 
@@ -228,10 +249,10 @@ int run_nn()
 
         if (vectorised)
         {
-            cout << "Using Vector Class" << endl;
+            cout << "Using vectorisation" << endl;
             nn.train(training_data, training_labels, epochs, output_cost_every_n_epochs);
 
-            // cout << "Using Vector Method" << endl;
+            // An alternative implementation
             // train_vectorized(nodes_per_layer, learning_rate, 
             //                 constants, weights,
             //                 training_data, training_labels,
@@ -239,20 +260,34 @@ int run_nn()
         }
         else
         {
-            cout << "Using loops" << endl;
-            train_loop_faster(nodes_per_layer, learning_rate, 
-                            constants, weights,
-                            training_data_loop, training_labels_loop,
-                            epochs);
+            if (threaded)
+            {
+                cout << "Using loops split over all available threads" << endl;            
+                // Parallel train
+                nn_loop.set_training_parameters(training_data_loop, training_labels_loop, epochs, output_cost_every_n_epochs);
+                tbb::blocked_range r = tbb::blocked_range<size_t>((size_t) 0, training_data_loop.size());
+                for (size_t epoch = 0; epoch < epochs; ++epoch) 
+                {
+                    tbb::parallel_reduce(r, nn_loop);
+                    nn_loop.update_weights(training_data_loop.size());
+                }
+            }
+            else
+            {
+                cout << "Using loops and only on one thread" << endl;            
+                nn_loop.train(training_data_loop, training_labels_loop, epochs, output_cost_every_n_epochs);
+                // An alternative implementation
+                // train_loop_faster(nodes_per_layer, learning_rate, 
+                //                 constants, weights,
+                //                 training_data_loop, training_labels_loop,
+                //                 epochs);
+            }
         }
         double end = omp_get_wtime(); 
         printf("Training took %f seconds\n", end - start);
 
-        bool write_trained_parameters_to_file = reader.GetBoolean("data", "write_trained_parameters_to_file", false);
         if (write_trained_parameters_to_file)
         {
-            string path_to_write_trained_parameters = reader.GetString("data", "path_to_write_trained_parameters", "./");
-            string parameter_file_prefix = reader.GetString("data", "parameter_file_prefix", "default");
             write_parameters(weights, constants, path_to_write_trained_parameters, parameter_file_prefix);
             cout << "Training parameters persisted to file" << endl;
         }

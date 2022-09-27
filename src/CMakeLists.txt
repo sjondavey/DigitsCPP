@@ -10,6 +10,7 @@ set(FIRST_PRINCIPALS_NN_LIBRARY_LIB_HDR
     typedefs.h
     neuralNetworkMethods.h
     functions.h
+    neuralnetworkloop.h
     )
 
 set(FIRST_PRINCIPALS_NN_LIBRARY_LIB_SRC 
@@ -18,7 +19,9 @@ set(FIRST_PRINCIPALS_NN_LIBRARY_LIB_SRC
     readwritematrixtocsv.cpp
     neuralNetworkMethods.cpp
     functions.cpp
+    neuralnetworkloop.cpp
     )
+
 
 # Making use of the target_sources(...) to add sources and headers rather than listing them in the add_library(...) macro. 
 # target_sources allows sources to be declared as PRIVATE (necessary to build), INTERFACE (not required for build, 
@@ -37,4 +40,9 @@ target_sources(${FIRST_PRINCIPALS_NN_LIBRARY}
 #-- eigen3 ------------------------------
 find_package(Eigen3 REQUIRED)
 target_link_libraries(${FIRST_PRINCIPALS_NN_LIBRARY} PRIVATE Eigen3::Eigen)
+#----------------------------------------
+
+#-- oneTBB ------------------------------
+find_package(TBB CONFIG REQUIRED)
+target_link_libraries(${FIRST_PRINCIPALS_NN_LIBRARY} PRIVATE TBB::tbb)
 #----------------------------------------

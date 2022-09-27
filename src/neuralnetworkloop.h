@@ -1,5 +1,5 @@
-#ifndef NN_INCLUDED
-#define NN_INCLUDED
+#ifndef NN_LOOP_INCLUDED
+#define NN_LOOP_INCLUDED
 
 #include <vector>
 #include <functional>
@@ -7,6 +7,10 @@
 #include "readwritematrixtocsv.h"
 #include "functions.h"
 #include <iomanip> // for spoacing of cout
+#include <numeric> // std::iota
+#include <tbb/blocked_range.h>
+#include <tbb/parallel_reduce.h>
+
 
 using namespace std;
 
@@ -20,7 +24,7 @@ namespace neuralnetworkfirstprinciples {
  * The solution makes use of the Eigen3 matrix library (https://eigen.tuxfamily.org/) 
  * which can run in multiple threads using OpenMP.
  */
-class NeuralNetwork
+class NeuralNetworkLoop
 {
     public:
     /* Inputs to the NN consist of
@@ -46,19 +50,33 @@ class NeuralNetwork
           a function which needs to modify these Parameters in place but I don't think it should work like this 
           in a class object. A class should (?) make a copy of these input parameters so they cannot be messed with
     */
-    NeuralNetwork(const vector<unsigned short> nodes_per_layer, 
-                  const Scalar learning_rate, 
-                  vector<shared_ptr<ColVector>>& constants, 
-                  vector<shared_ptr<Matrix>>& weights);
+    NeuralNetworkLoop(const vector<unsigned short> nodes_per_layer, 
+                     const Scalar learning_rate, 
+                     vector<shared_ptr<ColVector>>& constants, 
+                     vector<shared_ptr<Matrix>>& weights);
+    
+    NeuralNetworkLoop( NeuralNetworkLoop& nnl, tbb::split );
+    void operator()(const tbb::blocked_range<size_t>& r);
+    void join(NeuralNetworkLoop& rhs);
+
 
     // Does not output anything but the Parameters (weights and constants) are updated
-    void train(shared_ptr<Matrix>& data,
-               shared_ptr<Matrix>& labels,
+    void set_training_parameters(vector<shared_ptr<ColVector>>& data,
+               vector<shared_ptr<ColVector>>& labels,
                size_t epochs,
                size_t output_cost_accuracy_every_n_steps = 100);
 
+    void train(vector<shared_ptr<ColVector>>& data,
+               vector<shared_ptr<ColVector>>& labels,
+               size_t epochs,
+               size_t output_cost_accuracy_every_n_steps = 100);
+
+    void train_parallel();
+
+    void update_weights(size_t size_of_training_set_indicies); 
+
     // Returns, Y_hat = A[final_layer_number], the last calculation of the propagate_forward method
-    shared_ptr<Matrix> evaluate(shared_ptr<Matrix>& data);
+    shared_ptr<Matrix> evaluate(vector<shared_ptr<ColVector>>& data);
 
 
     // For testing only
@@ -66,35 +84,29 @@ class NeuralNetwork
 
 
     private:
-    void set_input_data(shared_ptr<Matrix>& data);
-    void set_expected_results(shared_ptr<Matrix>& labels);
-    // Make sure to have set the input data before calling this method
-    // If we set A[0] to input data, this method  
-    // for i in (0, num_layers):
-    //      Z[i] = A[i] \times W[i] + b[i];
-    //      A[i+1] = activation_function(Z[i])
-    // Indexing in this method can be a little confusing because, if we set A[0] to the input
-    // data, it will be one element longer than every other vector
-    void propagate_forward();
-    void propagate_backward();
-    void update_weights(); 
+    size_t epochs;
+    size_t training_epoch_number;
+    size_t output_cost_accuracy_every_n_steps;
+    Scalar cost;
+    Scalar accuracy;
 
+    void set_input_data(vector<shared_ptr<ColVector>>& data);
+    void set_expected_results(vector<shared_ptr<ColVector>>& labels);
 
+    void propagate(vector<size_t> training_set_indicies);
 
     vector<unsigned short> nodes_per_layer; 
     Scalar learning_rate;
 
-    shared_ptr<Matrix> data;
+    vector<shared_ptr<ColVector>> data;
     size_t number_of_training_examples;
-    shared_ptr<Matrix> labels;
-    unique_ptr<Matrix> ones; // for internal calculation during the back propagation step
+    vector<shared_ptr<ColVector>> labels;
+    unique_ptr<ColVector> ones; // for internal calculation during the back propagation step
 
-    vector<shared_ptr<Matrix>> unactivated_values; // stores the un-activated (activation fn not yet applied) values of layers (i.e. Z = WX + b)
-    vector<shared_ptr<Matrix>> d_unactivated_values; // derivative of unactivated_values
-    vector<shared_ptr<Matrix>> neuron_values;      // stores the different layers of out network (AKA 'activated' vector A = sigmoid(Z))
-    vector<shared_ptr<Matrix>> d_neuron_values;    // stores the error contribution of each neurons (i.e. dA where A = sigmoid(Z))
+    
     vector<shared_ptr<Matrix>> weights;            // Weights itself (W)
-    vector<shared_ptr<Matrix>> d_weights;          // derivative of the weights (dW)
+    vector<shared_ptr<Matrix>> weights_transpose;
+    vector<shared_ptr<Matrix>> d_weights_transpose;          // derivative of the weights (dW)
     vector<shared_ptr<ColVector>> constants;       // Constants (b)
     vector<shared_ptr<ColVector>> d_constants;     // derivative of the constants 
 };

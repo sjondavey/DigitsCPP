@@ -5,7 +5,7 @@ using namespace std;
 namespace neuralnetworkfirstprinciples {
 
     NeuralNetwork::NeuralNetwork(const vector<unsigned short> nodes_per_layer, 
-                                 const float learning_rate, 
+                                 const Scalar learning_rate, 
                                  vector<shared_ptr<ColVector>>& constants, 
                                  vector<shared_ptr<Matrix>>& weights)
     {

@@ -1,40 +1,45 @@
 # Digit Recognition
- Having written a vectorised version of gradient descent in Python to 'solve' the [Digit Recognition problem](https://www.kaggle.com/competitions/digit-recognizer), I wanted to understand if I could improve the execution time of the training algorithms if I wrote something in C++. In principle this should be relatively simple but I wanted to understand what it would take and how much I could improve it. Spoiler alert! Given my limited ability to work in OpenMP with the Microsoft Compiler, I only managed a 25% performance improvement on my benchmark test. 
+ Having written a vectorised version of gradient descent in Python (numpy) to 'solve' the [Digit Recognition problem](https://www.kaggle.com/competitions/digit-recognizer), I wanted to understand the relative performance of this to alternatives written in C++. Given my limited programming ability, there is no way I have come close to any optimal implementation but the work was still interesting. 
 
  # Setup
  - Python 3.10.4 for the benchmark implementation
  - Microsoft (R) C/C++ Optimizing Compiler Version 19.32.31329
  - vcpkg package management program version 2022-07-21-a0e87e227afb536c62188c11ad029954f28fdb22
  - Package: [Inih](https://github.com/benhoyt/inih) to read initialisation files
- - Package: [Eigen3 3.4.0](https://eigen.tuxfamily.org/) for matrix manipulation
+ - Package: [Eigen3 3.4.0](https://eigen.tuxfamily.org/) for matrix manipulation 
+ - Package: [oneTBB](https://github.com/oneapi-src/oneTBB) for running loops in parallel
  - Package: [Catch2](https://github.com/catchorg/Catch2) for testing
  - Some terrible CMake - my fault because I am a noob. In particular I really struggled getting the appropriate inih debug or release library linked because it appears that inih does not have the necessary CMake support files. In the end I require the user to create an Environment Variable VCPKG_ROOT (to the folder that contains vcpkg.exe) from which I force CMake to find the appropriate version of inih.lib
  - VSCode
 
 # Code Structure
-- The Python code in the Python folder only has a training algorithm. My benchmark test uses all the kaggle input data for training (i.e. there is no training / testing split) because I am only interested in the algorithm's performance
-- The final CPP Gradient Descent algorithm is in `/src/neuralnetwork.cpp`. I wrote this as a class because it reads easier. 
-- Experimental CPP implementations can be found in `/src/neuralNetworkMethods.cpp`. I tried using loops instead of vectorisation (see `train_loop_base` - the naive implementation; and `train_loop_faster` - which uses more memory because is keeps copies of the Weights and the derivative of the Weights in their base and transpose format to reduce the number of calculations). 
+- The Python code in the Python folder only has a training algorithm. My benchmark test uses all the Kaggle input data for training (i.e. there is no training / testing split) because I am only interested in the algorithm's execution speed.
+- The final vectorised version is found in `/src/neuralnetwork.cpp`
+- The final loop version (both single and multithreaded) is found in `/src/neuralnetworkloop.cpp`
+- Experimental CPP implementations can be found in `/src/neuralNetworkMethods.cpp`. See `train_loop_base` - the naive implementation; and `train_loop_faster` - which uses more memory because is keeps copies of the Weights and the derivative of the Weights in their base and transpose format to reduce the number of calculations. 
 
 # Performance numbers
-Absolute performance is obviously dependant on the tin on which it runs. I will focus on relative performance and try to keep the machine specs out of the equation wherever possible. One spec which however is relevant, because nummpy is multithreaded, is that I run on 16 cores.
+Absolute performance is obviously dependant on the tin on which it runs. I will focus on relative performance and try to keep the machine specs out of the equation wherever possible. One spec which however is relevant is that the machine I used for this benchmark exercise has 16 cores.
 
 My benchmark test consists of 200 epochs though a neural network with 784 input neurons, one hidden layer of 50 neurons and an output layer of 10 neurons i.e. we set the architecture to (784,50,10). All 42,000 examples in the input file will be used in the training set for performance benchmarking (I am not trying to enter the Kaggle competition so no need to reserve anything for testing).
 
 - Python Base: Speed = 1.00 (normalised base). It uses numpy which is multithreaded. 
-- Fastest C++: Speed = 0.54 (46% improvement in execution time). It uses the OpenMP functionality in Eigen3
+- Fastest C++: Speed = 0.54 (46% improvement in execution time). It uses the Eigen for Vectorisation which uses OpenMP for multithreading. Speedup was almost entirely due to moving from double to single digit precision (see the `/src/typedefs.h` file to make this change)
+- Loop (single thread, single precision) = 2.80x
+- Loop (multi threaded, single precision) = 0.83 (16.5% improvement). Using intel's oneTBB for multithreading 
 
-For referece, the execution time, in seconds on my machine are as follows:
-| Run     | Python | Eigen3 |
-|---------|--------|--------|
-| 1       | 37.6   | 20.23  |
-| 2       | 37.9   | 20.11  |
-| 3       | 38.9   | 22.50  |
-| 4       | 37.2   | 20.26  |
-| 5       | 39.2   | 20.13  |
-| Average | 38.16  | 20.65  |
+For reference, the execution time, in seconds on my machine are as follows:  
+|         | Python | Eigen3 | Eigen3 |Loop (1 thread) | Loop (tbb) |
+|---------|--------|--------|--------|--------------|------------|
+|Precision| double | single | double |single        | single     |
+| 1       | 37.6   | 20.23  | 36.75  |107.11	    |31.91       |
+| 2       | 37.9   | 20.11  | 38.28  |106.45	    |31.62       |
+| 3       | 38.9   | 22.50  | 37.95  |106.51	    |32.04       |
+| 4       | 37.2   | 20.26  | 36.46  |106.51	    |31.53       |
+| 5       | 39.2   | 20.13  | 36.74  |107.6	        |32.04       |
+| Average | 38.16  | 20.65  | 37.24  |106.84	    |31.83       |
 
-While I also write loop rather than vectorised versions in C++, I could not get OpenMP to run efficiently in MSVC so these were run in a single thread. The fastest I could achieve in a single thread was 4.0
+
 
 
 # Theory
