@@ -1,4 +1,6 @@
 # Digit Recognition
+ Note: At the time of publishing, Github did not render formula well. This markdown renders well in VSCode but I cannot solve the formatting in Github markdown - sorry.
+ 
  Having written a vectorised version of gradient descent in Python (numpy) to 'solve' the [Digit Recognition problem](https://www.kaggle.com/competitions/digit-recognizer), I wanted to understand the relative performance of this to alternatives written in C++. Given my limited programming ability, there is no way I have come close to any optimal implementation but the work was still interesting. 
 
  # Setup
