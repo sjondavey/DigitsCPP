@@ -19,19 +19,41 @@ target_include_directories(${FIRST_PRINCIPALS_NN_DEMO} PUBLIC ${INIH_INC_PATH})
 # so as not to have to hard code the full directory which obviously would not work on 
 # a different machine
 message("VCPKG_ROOT roos is " $ENV{VCPKG_ROOT})
+
+if(NOT CMAKE_CL_64)
+FIND_LIBRARY(INIH_INC_LIB_DEBUG
+  NAMES inih # Change name here if debug lib has different name.
+  #PATHS E:/SD/Programming/C++/vcpkg/installed/x64-windows/debug/lib
+  PATHS $ENV{VCPKG_ROOT}/installed/x86-windows/debug/lib
+  NO_DEFAULT_PATH
+  )
+else()
 FIND_LIBRARY(INIH_INC_LIB_DEBUG
   NAMES inih # Change name here if debug lib has different name.
   #PATHS E:/SD/Programming/C++/vcpkg/installed/x64-windows/debug/lib
   PATHS $ENV{VCPKG_ROOT}/installed/x64-windows/debug/lib
   NO_DEFAULT_PATH
   )
+endif()
 message("INIH_INC_LIB_DEBUG is " ${INIH_INC_LIB_DEBUG})
+
+if(NOT CMAKE_CL_64)
+FIND_LIBRARY(INIH_INC_LIB_RELEASE
+  NAMES inih
+  #PATHS E:/SD/Programming/C++/vcpkg/installed/x64-windows/lib
+  PATHS $ENV{VCPKG_ROOT}/installed/x86-windows/lib
+  NO_DEFAULT_PATH
+  )
+
+else()
 FIND_LIBRARY(INIH_INC_LIB_RELEASE
   NAMES inih
   #PATHS E:/SD/Programming/C++/vcpkg/installed/x64-windows/lib
   PATHS $ENV{VCPKG_ROOT}/installed/x64-windows/lib
   NO_DEFAULT_PATH
   )
+endif()
+
 message("INIH_INC_LIB_RELEASE is " ${INIH_INC_LIB_RELEASE})
 #--  inih  ------------------------------
 
