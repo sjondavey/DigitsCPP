@@ -49,7 +49,7 @@ While define and use notation here, I have tried to use descriptive names for th
 - $l$ : the number of layers in the Neural Network (including input and output). 
 - $n^{[i]}$ for $i=1,..,l$ : the number of nodes in a layer. 
 - $m$ : the number of examples in the training set. 
-- $x^{(i)}$ for $i=1,...,m$ is the $i$-th example represented as a column vector of size $(n^{[0]} \times 1)$
+- $x^{(i)}$ for $i=1,...,m$ is the $i$-th example represented as a column vector of size $(n^{[0]} \times 1)$  
 - $X=
 \begin{bmatrix}
 |&|&|&| \\

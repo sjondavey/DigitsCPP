@@ -33,6 +33,13 @@ def read_kaggle_data_all_into_training(filename):
     Y_train = get_training_labels_from_input(all_data['label'].to_numpy())
     return X_train, Y_train
 
+def read_kaggle_data_all_into_training_for_keras(filename):
+    all_data = pd.read_csv(filename)
+    X_train = all_data[all_data.columns[1:]].to_numpy() / 256
+    X_train = X_train.astype('float32')
+    Y_train = (all_data['label'].to_numpy()).astype('float32')
+    return X_train, Y_train
+
 
 def read_parameters_from_file(inputpath, fileprefix):
     parameters = {}
